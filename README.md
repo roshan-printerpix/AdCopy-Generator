@@ -1,5 +1,4 @@
 # Ad‑Creative Generation Pipeline  
-*(Headline & Description only – no image or feedback loop)*  
 
 > **Goal** – Use a data‑driven LLM pipeline to scrape the web, clean & structure the data, surface insights, and generate CTR‑optimized headlines and descriptions that leverage proven tactics (e.g., Trojan headlines).  
 
@@ -10,12 +9,12 @@
 | Function | What it Does | Tech Choice |
 |----------|--------------|--------------|
 | **Data Collection** | Pull raw text from websites, forums, social channels | Scrapy + API wrappers |
-| **Cleaning** | Strip noise, enforce length limits, apply headline‑CTR rules | GPT‑4o / Claude‑3.5 |
-| **Structuring** | Cluster topics & annotate tags (e.g., “Trojan,” “Curiosity”) | BERTopic + spaCy |
+| **Cleaning** | Strip noise, enforce length limits, apply headline‑CTR rules | Custom code |
+| **Structuring** | Cluster topics & annotate tags (e.g., “Trojan,” “Curiosity”) | GPT‑4o + prompt engineering |
 | **Insight Management** | RAG + rule engine to evolve rules automatically | Pinecone + LangChain + durable‑rules |
-| **Generation** | Produce headline + description pairs in one pass | GPT‑4o / Claude‑3.5 + prompt engineering |
+| **Generation** | Produce headline + description pairs in one pass | GPT‑4o + prompt engineering |
 | **Orchestration** | Schedule & monitor workflows | Prefect (Cloud or OSS) |
-| **Storage** | Persist raw & processed data, rules, creatives | PostgreSQL + Pinecone + Redis |
+| **Storage** | Persist raw & processed data, rules, creatives | Supabase + Pinecone + Redis |
 
 > 🔍 **CTR Boost Tip** – Trojan headlines that plant a “just‑one‑more‑click” curiosity point can deliver 2× uplift. The pipeline incorporates that knowledge into every rule & generation prompt.
 
@@ -53,7 +52,7 @@
 | Misc. noise | Remove irrelevant sections | “Drop any question‑answer pairs, keep narrative.” | Clean body |
 | Relevance scoring | Keep only content ≥ 7/10 relevance to ad context | “Rate relevance (0‑10). Keep ≥ 7.” | Boolean flag |
 
-**LLM Choice** – **GPT‑4o** (fast, large context, cheap) or **Claude‑3.5 Sonnet** (zero‑shot filtering).  
+**Tech Choice** – Custom code for noise removal and filtering.  
 
 ### 3.3 Structuring & Annotation (Priority 2)
 
@@ -74,49 +73,25 @@
 
 2. **RAG lookup** – Retrieve top‑k similar insights to new clean doc.
 
-3. **Rule Engine** – `durable‑rules` in Python.  
-   - **Rule Example**  
-     ```python
-     @when_all(m.action == "new_insight")
-     def check_conflict(c):
-         old_rule = get_rule_by_tag(c.tags[0])
-         if similarity_score > old_rule.score + 0.1:
-             create_rule(c)
-         else:
-             human_review(c)
-     ```
+3. **Rule Engine** – `durable‑rules` in Python.
 4. **Human‑in‑Loop** – Slack or email alert if `confidence < 0.7`.
 
-5. **Archive** – Store last 7 days of rules + insights in **PostgreSQL** (time‑series) for future RAG.
+5. **Archive** – Store last 7 days of rules + insights in **Supabase** (time‑series) for future RAG.
 
-> **Insight Format** –  
-> ```json
-> { "id": "insight1234", "tags": ["Trojan"], "rule": "Headline starts with a question that promises a twist", "score": 0.92, "created_at": "2025-08-04T00:00:00Z" }
-> ```
+> **Insight Format** – JSON structure with id, tags, rule, score, and timestamp.
 
 ### 3.5 Content Generation (Priority 3)
 
 | Output | Prompt Template | LLM | Constraints |
 |--------|-----------------|-----|-------------|
-| **Headline** | “Generate 3 headline variants that use the **Trojan** pattern for a *product X* targeting *audience Y* in **English**. Each headline ≤ 8 words.” | **Claude‑3.5 Sonnet** | 8‑word max, curiosity focus, no generic filler |
+| **Headline** | “Generate 3 headline variants that use the **Trojan** pattern for a *product X* targeting *audience Y* in **English**. Each headline ≤ 8 words.” | **GPT‑4o** | 8‑word max, curiosity focus, no generic filler |
 | **Description** | “Write a 2‑sentence description supporting the headline above that emphasizes the *unique benefit* and ends with a *call‑to‑action*.” | **GPT‑4o** | 2 sentences, CTA present |
 
 **Post‑Processing**  
 - Length check → Trim or extend with LLM.  
 - Sentiment & keyword check via spaCy.  
 
-Output stored in schema:
-
-```json
-{
-  "creative_id": "cid-20250808-001",
-  "headline": "Ready to see the twist? Find it now!",
-  "description": "Discover the hidden feature that changes everything. Click to learn more.",
-  "tags": ["Trojan", "Curiosity"],
-  "score": 0.95,
-  "generated_at": "2025-08-08T05:20:00Z"
-}
-```
+Output stored in JSON schema with creative_id, headline, description, tags, score, and timestamp.
 
 ---
 
@@ -127,16 +102,16 @@ Output stored in schema:
 | **Scraper** | Scrapy + API wrappers | Reliable, scalable, Python‑first |
 | **Orchestration** | Prefect (Cloud or OSS) | Python-friendly DAGs, observability |
 | **Vector Store** | Pinecone | Managed, low‑latency similarity |
-| **LLM for Cleaning/Rules** | GPT‑4o / Claude‑3.5 | Large context, zero‑shot reasoning |
-| **LLM for Generation** | GPT‑4o (copy) or Claude‑3.5 (headline) | Proven copywriting quality |
+| **Cleaning** | Custom code | Efficient noise removal and filtering |
+| **LLM for Generation** | GPT‑4o | Proven copywriting quality |
 | **Embedding** | `text-embedding-3-small` | Fast, low‑cost |
 | **Rule Engine** | durable‑rules / business‑rules | Declarative logic with Python integration |
-| **Databases** | PostgreSQL (raw + archives), Redis (cache) | ACID, time‑series, fast reads |
+| **Databases** | Supabase (raw + archives), Redis (cache) | ACID, time‑series, fast reads |
 
-> **Why GPT‑4o / Claude?**  
+> **Why GPT‑4o?**  
 > - 8 k–32 k context (fits entire cleaned doc).  
 > - Cheap inference, robust prompt flexibility.  
-> - Both support “confidence” or “score” outputs (via chain‑of‑thought or `best_of`).  
+> - Supports “confidence” or “score” outputs (via chain‑of‑thought or `best_of`).  
 
 ---
 
@@ -144,7 +119,7 @@ Output stored in schema:
 
 1. **Containerise** every component (Scraper, LLM workers, Prefect agent).  
 2. **CI/CD** – GitHub Actions to push Docker images to registry (DockerHub / ECR).  
-3. **Scaling** – Prefect Cloud + AWS Fargate; LLM calls routed through **OpenAI / Anthropic API**.  
+3. **Scaling** – Prefect Cloud + AWS Fargate; LLM calls routed through **OpenAI API**.  
 4. **Observability** – Prefect UI + Prometheus/ Grafana for task metrics.  
 5. **Security** – Store API keys in AWS Secrets Manager / Vault.  
 
