@@ -1,0 +1,1 @@
+# AdCopy-Generator
