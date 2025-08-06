@@ -30,11 +30,11 @@ class DataCleaner:
             r'^\s*-.*$',  # Dash points
         ]
         
-        # Relevance keywords for ad context
+        # Relevance keywords for ad context (expanded for forum content)
         self.relevance_keywords = {
-            'high': ['buy', 'purchase', 'deal', 'offer', 'discount', 'sale', 'product', 'service', 'brand', 'quality', 'best', 'top', 'review', 'recommend'],
-            'medium': ['good', 'great', 'amazing', 'awesome', 'love', 'like', 'use', 'try', 'experience', 'worth', 'value'],
-            'low': ['maybe', 'perhaps', 'might', 'could', 'possibly', 'sometimes', 'occasionally']
+            'high': ['buy', 'purchase', 'deal', 'offer', 'discount', 'sale', 'product', 'service', 'brand', 'quality', 'best', 'top', 'review', 'recommend', 'marketing', 'business', 'seo', 'advertising', 'guide', 'tutorial', 'strategy', 'tips', 'money', 'profit', 'success'],
+            'medium': ['good', 'great', 'amazing', 'awesome', 'love', 'like', 'use', 'try', 'experience', 'worth', 'value', 'forum', 'community', 'discussion', 'help', 'learn', 'newbie', 'beginner', 'introduction', 'welcome', 'share', 'insight'],
+            'low': ['maybe', 'perhaps', 'might', 'could', 'possibly', 'sometimes', 'occasionally', 'general', 'basic', 'simple']
         }
 
     def clean_text(self, raw_text: str) -> str:
@@ -108,17 +108,27 @@ class DataCleaner:
         medium_ratio = medium_matches / total_words
         low_ratio = low_matches / total_words
         
-        # Weighted scoring
-        score = (high_ratio * 10) + (medium_ratio * 6) + (low_ratio * 3)
+        # Weighted scoring with better scaling
+        base_score = (high_ratio * 30) + (medium_ratio * 20) + (low_ratio * 10)
         
         # Boost for longer, more substantial content
-        length_boost = min(2.0, len(text) / 1000)
+        length_boost = min(3.0, len(text) / 500)
+        
+        # Boost for forum-specific content patterns
+        forum_boost = 0
+        text_lower = text.lower()
+        if any(pattern in text_lower for pattern in ['forum', 'community', 'guide', 'newbie', 'introduction']):
+            forum_boost = 2.0
+        
+        # Base score for any meaningful content
+        if total_words > 5:
+            base_score = max(base_score, 3.0)  # Minimum score for reasonable content
         
         # Penalty for very short content
-        if len(text) < 100:
-            score *= 0.5
+        if len(text) < 50:
+            base_score *= 0.7
             
-        final_score = min(10.0, score + length_boost)
+        final_score = min(10.0, base_score + length_boost + forum_boost)
         return round(final_score, 2)
 
     def extract_story_core(self, text: str) -> str:
