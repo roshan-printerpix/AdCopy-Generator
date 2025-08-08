@@ -23,6 +23,8 @@ class Config:
     REDDIT_CLIENT_ID = os.getenv('REDDIT_CLIENT_ID')
     REDDIT_CLIENT_SECRET = os.getenv('REDDIT_CLIENT_SECRET')
     REDDIT_USER_AGENT = os.getenv('REDDIT_USER_AGENT', 'AdCreativeBot/1.0')
+    REDDIT_USERNAME = os.getenv('REDDIT_USERNAME')
+    REDDIT_PASSWORD = os.getenv('REDDIT_PASSWORD')
     
     TWITTER_BEARER_TOKEN = os.getenv('TWITTER_BEARER_TOKEN')
     TWITTER_API_KEY = os.getenv('TWITTER_API_KEY')

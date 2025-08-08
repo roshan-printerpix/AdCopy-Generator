@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ad-Creative Insight Pipeline</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .controls {
+            margin-bottom: 2rem;
+        }
+
+        .config-section {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 1.5rem;
+        }
+
+        .config-section h3 {
+            margin-bottom: 1rem;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: #6c757d;
+            min-width: 100px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 0.5rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            min-width: 200px;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .data-viewer {
+            margin-top: 2rem;
+            background: #f8f9fa;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .data-viewer-header {
+            background: #667eea;
+            color: white;
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .data-viewer-header:hover {
+            background: #5a6fd8;
+        }
+
+        .data-viewer-content {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 0;
+            display: none;
+        }
+
+        .data-viewer-content.expanded {
+            display: block;
+        }
+
+        .data-item {
+            padding: 1rem;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .data-item:last-child {
+            border-bottom: none;
+        }
+
+        .data-item-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .data-item-content {
+            color: #6c757d;
+            white-space: pre-wrap;
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-icon.rotated {
+            transform: rotate(180deg);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 2px solid #e9ecef;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e9ecef;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .status-card.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea10, #764ba210);
+        }
+
+        .status-card h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #667eea;
+        }
+
+        .status-card p {
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .pipeline-steps {
+            margin-top: 2rem;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 4px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .step.pending {
+            border-left-color: #6c757d;
+        }
+
+        .step.running {
+            border-left-color: #ffc107;
+            background: linear-gradient(135deg, #ffc10710, #ff851010);
+            animation: pulse 2s infinite;
+        }
+
+        .step.completed {
+            border-left-color: #28a745;
+            background: linear-gradient(135deg, #28a74510, #20c99710);
+        }
+
+        .step.error {
+            border-left-color: #dc3545;
+            background: linear-gradient(135deg, #dc354510, #c8254510);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .step-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .step.pending .step-icon {
+            background: #6c757d;
+        }
+
+        .step.running .step-icon {
+            background: #ffc107;
+        }
+
+        .step.completed .step-icon {
+            background: #28a745;
+        }
+
+        .step.error .step-icon {
+            background: #dc3545;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: #333;
+        }
+
+        .step-message {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .step-count {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-left: 1rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+            border-radius: 4px;
+        }
+
+        .execution-time {
+            text-align: center;
+            margin-top: 1rem;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .errors {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 10px;
+            color: #721c24;
+        }
+
+        .errors h4 {
+            margin-bottom: 0.5rem;
+        }
+
+        .errors ul {
+            margin-left: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .status-overview {
+                grid-template-columns: 1fr;
+            }
+
+            .step {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .step-icon {
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Ad-Creative Insight Pipeline</h1>
+            <p>Transform raw content into structured marketing insights</p>
+        </div>
+
+        <div class="dashboard">
+            <div class="controls">
+                <div class="config-section">
+                    <h3>📋 Pipeline Configuration</h3>
+                    <div class="input-group">
+                        <label for="subreddits">Subreddits:</label>
+                        <input type="text" id="subreddits" placeholder="ppc, marketing, advertising" value="ppc">
+                    </div>
+                    <div class="input-group">
+                        <label for="postLimit">Post Limit:</label>
+                        <input type="number" id="postLimit" placeholder="20" value="20" min="1" max="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="timeFilter">Time Filter:</label>
+                        <select id="timeFilter" style="flex: 1; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
+                            <option value="hour">Past Hour</option>
+                            <option value="day">Past Day</option>
+                            <option value="week" selected>Past Week</option>
+                            <option value="month">Past Month</option>
+                            <option value="year">Past Year</option>
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="includeComments">Include Comments:</label>
+                        <input type="checkbox" id="includeComments" checked style="width: auto; margin-right: 0.5rem;">
+                        <span style="color: #6c757d; font-size: 0.9rem;">Scrape comments from each post</span>
+                    </div>
+                    <div class="input-group">
+                        <label for="maxComments">Max Comments:</label>
+                        <input type="number" id="maxComments" placeholder="10" value="10" min="1" max="50">
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button id="startBtn" class="btn btn-primary">Start Pipeline</button>
+                    <button id="resetBtn" class="btn btn-secondary">Reset</button>
+                </div>
+            </div>
+
+            <div class="status-overview">
+                <div class="status-card" id="totalCard">
+                    <h3 id="totalInsights">0</h3>
+                    <p>Total Insights</p>
+                </div>
+                <div class="status-card" id="statusCard">
+                    <h3 id="currentStatus">Ready</h3>
+                    <p>Status</p>
+                </div>
+                <div class="status-card" id="timeCard">
+                    <h3 id="executionTime">0s</h3>
+                    <p>Execution Time</p>
+                </div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+
+            <div class="pipeline-steps">
+                <div class="step pending" id="step-data_collection">
+                    <div class="step-icon">1</div>
+                    <div class="step-content">
+                        <div class="step-title">Data Collection</div>
+                        <div class="step-message">Scraping content from web sources</div>
+                    </div>
+                    <div class="step-count" id="count-data_collection">0</div>
+                </div>
+
+                <div class="step pending" id="step-cleaning">
+                    <div class="step-icon">2</div>
+                    <div class="step-content">
+                        <div class="step-title">Text Cleaning</div>
+                        <div class="step-message">Removing noise and normalizing content</div>
+                    </div>
+                    <div class="step-count" id="count-cleaning">0</div>
+                </div>
+
+                <div class="step pending" id="step-structuring">
+                    <div class="step-icon">3</div>
+                    <div class="step-content">
+                        <div class="step-title">LLM Structuring</div>
+                        <div class="step-message">Converting to structured insights</div>
+                    </div>
+                    <div class="step-count" id="count-structuring">0</div>
+                </div>
+
+                <div class="step pending" id="step-deduplication">
+                    <div class="step-icon">4</div>
+                    <div class="step-content">
+                        <div class="step-title">Deduplication</div>
+                        <div class="step-message">Removing duplicate insights</div>
+                    </div>
+                    <div class="step-count" id="count-deduplication">0</div>
+                </div>
+
+                <div class="step pending" id="step-storage">
+                    <div class="step-icon">5</div>
+                    <div class="step-content">
+                        <div class="step-title">Database Storage</div>
+                        <div class="step-message">Storing insights in Supabase</div>
+                    </div>
+                    <div class="step-count" id="count-storage">0</div>
+                </div>
+            </div>
+
+            <div class="execution-time" id="executionTimeDetail"></div>
+
+            <div id="errors" class="errors" style="display: none;">
+                <h4>Errors:</h4>
+                <ul id="errorList"></ul>
+            </div>
+
+            <div class="data-viewer" id="dataViewer" style="display: none;">
+                <div class="data-viewer-header" onclick="toggleDataViewer()">
+                    <span>📊 Scraped Data (<span id="dataCount">0</span> items)</span>
+                    <span class="toggle-icon" id="toggleIcon">▼</span>
+                </div>
+                <div class="data-viewer-content" id="dataViewerContent">
+                    <!-- Scraped data will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let startTime = null;
+        let executionInterval = null;
+
+        // DOM elements
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const totalInsights = document.getElementById('totalInsights');
+        const currentStatus = document.getElementById('currentStatus');
+        const executionTime = document.getElementById('executionTime');
+        const executionTimeDetail = document.getElementById('executionTimeDetail');
+        const progressFill = document.getElementById('progressFill');
+        const errors = document.getElementById('errors');
+        const errorList = document.getElementById('errorList');
+
+        // Step elements
+        const steps = ['data_collection', 'cleaning', 'structuring', 'deduplication', 'storage'];
+
+        // Event listeners
+        startBtn.addEventListener('click', startPipeline);
+        resetBtn.addEventListener('click', resetPipeline);
+
+        // Socket event handlers
+        socket.on('progress_update', updateProgress);
+
+        function startPipeline() {
+            // Get configuration from form
+            const subredditsInput = document.getElementById('subreddits').value;
+            const postLimit = parseInt(document.getElementById('postLimit').value) || 20;
+            const timeFilter = document.getElementById('timeFilter').value;
+            const includeComments = document.getElementById('includeComments').checked;
+            const maxComments = parseInt(document.getElementById('maxComments').value) || 10;
+            
+            // Parse subreddits (split by comma and trim)
+            const subreddits = subredditsInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            
+            if (subreddits.length === 0) {
+                alert('Please enter at least one subreddit');
+                return;
+            }
+
+            fetch('/api/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    sources: {
+                        reddit: { 
+                            enabled: true,
+                            subreddits: subreddits,
+                            limit: postLimit,
+                            time_filter: timeFilter,
+                            sort: 'hot',
+                            include_comments: includeComments,
+                            max_comments: maxComments
+                        },
+                        web: { enabled: false },
+                        apis: { enabled: false }
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error starting pipeline:', error);
+                alert('Error starting pipeline');
+            });
+        }
+
+        function resetPipeline() {
+            fetch('/api/reset', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Pipeline reset');
+                })
+                .catch(error => {
+                    console.error('Error resetting pipeline:', error);
+                });
+        }
+
+        function updateProgress(status) {
+            console.log('Progress update:', status);
+
+            // Update controls
+            startBtn.disabled = status.running;
+            resetBtn.disabled = status.running;
+
+            // Update status cards
+            totalInsights.textContent = status.total_insights;
+            
+            if (status.running) {
+                currentStatus.textContent = 'Running';
+                document.getElementById('statusCard').classList.add('active');
+            } else if (status.end_time) {
+                currentStatus.textContent = 'Completed';
+                document.getElementById('statusCard').classList.remove('active');
+            } else {
+                currentStatus.textContent = 'Ready';
+                document.getElementById('statusCard').classList.remove('active');
+            }
+
+            // Update execution time
+            if (status.start_time) {
+                startTime = status.start_time;
+                if (status.running && !executionInterval) {
+                    executionInterval = setInterval(updateExecutionTime, 1000);
+                } else if (!status.running && executionInterval) {
+                    clearInterval(executionInterval);
+                    executionInterval = null;
+                    if (status.end_time) {
+                        const duration = status.end_time - status.start_time;
+                        executionTime.textContent = `${duration.toFixed(1)}s`;
+                        executionTimeDetail.textContent = `Pipeline completed in ${duration.toFixed(1)} seconds`;
+                    }
+                }
+            }
+
+            // Update progress bar
+            const completedSteps = Object.values(status.steps).filter(step => step.status === 'completed').length;
+            const progressPercent = (completedSteps / steps.length) * 100;
+            progressFill.style.width = `${progressPercent}%`;
+
+            // Update steps
+            steps.forEach(stepName => {
+                const stepElement = document.getElementById(`step-${stepName}`);
+                const countElement = document.getElementById(`count-${stepName}`);
+                const stepData = status.steps[stepName];
+
+                // Remove all status classes
+                stepElement.classList.remove('pending', 'running', 'completed', 'error');
+                
+                // Add current status class
+                stepElement.classList.add(stepData.status);
+
+                // Update count
+                countElement.textContent = stepData.count;
+
+                // Update message
+                const messageElement = stepElement.querySelector('.step-message');
+                if (stepData.message) {
+                    messageElement.textContent = stepData.message;
+                }
+            });
+
+            // Update errors
+            if (status.errors && status.errors.length > 0) {
+                errorList.innerHTML = '';
+                status.errors.forEach(error => {
+                    const li = document.createElement('li');
+                    li.textContent = error;
+                    errorList.appendChild(li);
+                });
+                errors.style.display = 'block';
+            } else {
+                errors.style.display = 'none';
+            }
+
+            // Update scraped data viewer
+            if (status.scraped_data && status.scraped_data.length > 0) {
+                updateDataViewer(status.scraped_data);
+            }
+        }
+
+        function updateExecutionTime() {
+            if (startTime) {
+                const now = Date.now() / 1000;
+                const duration = now - startTime;
+                executionTime.textContent = `${duration.toFixed(0)}s`;
+            }
+        }
+
+        function toggleDataViewer() {
+            const content = document.getElementById('dataViewerContent');
+            const icon = document.getElementById('toggleIcon');
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                icon.classList.remove('rotated');
+                icon.textContent = '▼';
+            } else {
+                content.classList.add('expanded');
+                icon.classList.add('rotated');
+                icon.textContent = '▲';
+            }
+        }
+
+        function updateDataViewer(data) {
+            const dataViewer = document.getElementById('dataViewer');
+            const dataContent = document.getElementById('dataViewerContent');
+            const dataCount = document.getElementById('dataCount');
+            
+            if (data && data.length > 0) {
+                dataViewer.style.display = 'block';
+                dataCount.textContent = data.length;
+                
+                dataContent.innerHTML = '';
+                data.forEach((item, index) => {
+                    const dataItem = document.createElement('div');
+                    dataItem.className = 'data-item';
+                    
+                    // Extract title and content from the scraped data
+                    const lines = item.split('\n');
+                    const title = lines[0] || `Post ${index + 1}`;
+                    const content = lines.slice(1).join('\n').substring(0, 500) + (item.length > 500 ? '...' : '');
+                    
+                    dataItem.innerHTML = `
+                        <div class="data-item-title">${title}</div>
+                        <div class="data-item-content">${content}</div>
+                    `;
+                    
+                    dataContent.appendChild(dataItem);
+                });
+            } else {
+                dataViewer.style.display = 'none';
+            }
+        }
+
+        // Initial status load
+        fetch('/api/status')
+            .then(response => response.json())
+            .then(updateProgress)
+            .catch(error => console.error('Error loading initial status:', error));
+    </script>
+</body>
+</html>

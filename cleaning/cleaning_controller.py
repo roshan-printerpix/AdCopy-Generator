@@ -4,6 +4,7 @@ Takes raw input and returns cleaned text ready for structuring.
 """
 
 from . import cleaner
+from utils.config import Config
 
 def process_raw_content(raw_content_list):
     """
@@ -39,10 +40,11 @@ def clean_single_text(raw_text):
     
     # Apply all cleaning steps
     text = cleaner.remove_html_tags(raw_text)
+    text = cleaner.clean_reddit_specific(text)  # Reddit-specific cleaning
     text = cleaner.remove_usernames_and_mentions(text)
     text = cleaner.remove_urls(text)
     text = cleaner.remove_emojis_and_symbols(text)
-    text = cleaner.truncate_to_paragraphs(text)
+    text = cleaner.truncate_to_paragraphs(text, max_paragraphs=Config.MAX_PARAGRAPHS)
     text = cleaner.normalize_whitespace(text)
     
     # Return None if text is too short after cleaning

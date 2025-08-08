@@ -97,23 +97,24 @@ def main():
     """
     Main function with example configuration.
     """
-    # Example configuration
+    # Configuration focused on r/ppc
     sources_config = {
         'reddit': {
-            'subreddits': ['marketing', 'advertising', 'entrepreneur'],
-            'keywords': ['ad creative', 'conversion', 'campaign'],
-            'limit': 50
+            'enabled': True,
+            'subreddits': ['ppc'],  # Focus on r/ppc subreddit
+            'limit': 50,
+            'time_filter': 'week',
+            'sort': 'hot'
         },
         'web': {
-            'urls': [
-                'https://blog.example.com',
-                'https://marketing.example.com'
-            ]
+            'enabled': False,  # Disabled for now
+            'urls': []
         },
         'apis': {
+            'enabled': False,  # Disabled for now
             'twitter': {
-                'hashtags': ['#marketing', '#advertising'],
-                'limit': 30
+                'hashtags': ['#ppc', '#advertising'],
+                'limit': 20
             }
         }
     }
