@@ -7,7 +7,7 @@ from data_collection.pipeline_entry import collect_and_process_data
 from cleaning.cleaning_controller import process_raw_content
 from structuring.structuring_controller import process_cleaned_content
 from deduplication.deduplication_controller import batch_check_duplicates
-from supabase_storage.supabase_client import initialize_supabase
+from supabase_storage.supabase_client import get_supabase_admin_client
 from supabase_storage.insight_inserter import batch_insert_insights
 
 def run_pipeline(sources_config):
@@ -74,8 +74,8 @@ def run_pipeline(sources_config):
         
         # Step 5: Storage
         print("Step 5: Storing insights in Supabase...")
-        supabase_client = initialize_supabase()
-        successful_inserts, failed_inserts = batch_insert_insights(supabase_client, unique_insights)
+        supabase_admin_client = get_supabase_admin_client()
+        successful_inserts, failed_inserts = batch_insert_insights(supabase_admin_client, unique_insights)
         results['stored_insights_count'] = len(successful_inserts)
         
         if failed_inserts:

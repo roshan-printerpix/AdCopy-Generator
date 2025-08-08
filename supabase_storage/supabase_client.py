@@ -5,6 +5,7 @@ Initializes and manages Supabase connection and helpers.
 
 import os
 from supabase import create_client, Client
+from utils.config import Config
 
 class SupabaseManager:
     """
@@ -21,19 +22,21 @@ class SupabaseManager:
         Initialize Supabase client with credentials.
         
         Args:
-            url (str): Supabase project URL (optional, uses env var if not provided)
-            key (str): Supabase API key (optional, uses env var if not provided)
+            url (str): Supabase project URL (optional, uses config if not provided)
+            key (str): Supabase API key (optional, uses config if not provided)
         
         Returns:
             Client: Supabase client instance
         """
-        self.url = url or os.getenv('SUPABASE_URL')
-        self.key = key or os.getenv('SUPABASE_KEY')
+        self.url = url or Config.SUPABASE_URL
+        self.key = key or Config.SUPABASE_KEY
         
         if not self.url or not self.key:
-            raise ValueError("Supabase URL and key must be provided either as parameters or environment variables")
+            raise ValueError("Supabase URL and key must be provided either as parameters or in configuration")
         
+        print(f"Connecting to Supabase at: {self.url}")
         self.client = create_client(self.url, self.key)
+        print("Supabase client initialized successfully")
         return self.client
     
     def get_client(self):
@@ -57,12 +60,25 @@ class SupabaseManager:
         """
         try:
             client = self.get_client()
+            print("Testing Supabase connection...")
+            
             # Try a simple query to test connection
             result = client.table('insights').select('id').limit(1).execute()
+            print(f"Connection test successful! Found {len(result.data)} records")
             return True
         except Exception as e:
             print(f"Connection test failed: {e}")
-            return False
+            print("This might be because the 'insights' table doesn't exist yet.")
+            
+            # Try a more basic connection test
+            try:
+                # Test with a simple RPC call or auth check
+                client.auth.get_session()
+                print("Basic Supabase connection is working")
+                return True
+            except Exception as e2:
+                print(f"Basic connection also failed: {e2}")
+                return False
     
     def get_table_info(self, table_name='insights'):
         """
@@ -91,12 +107,24 @@ supabase_manager = SupabaseManager()
 
 def get_supabase_client():
     """
-    Get the global Supabase client instance.
+    Get the global Supabase client instance (anon key).
     
     Returns:
         Client: Supabase client instance
     """
     return supabase_manager.get_client()
+
+def get_supabase_admin_client():
+    """
+    Get Supabase client with service role key for admin operations (bypasses RLS).
+    
+    Returns:
+        Client: Supabase admin client instance
+    """
+    if not Config.SUPABASE_SERVICE_ROLE_KEY:
+        raise ValueError("Service role key not configured - cannot create admin client")
+    
+    return create_client(Config.SUPABASE_URL, Config.SUPABASE_SERVICE_ROLE_KEY)
 
 def initialize_supabase(url=None, key=None):
     """

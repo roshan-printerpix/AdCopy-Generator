@@ -15,7 +15,9 @@ class Config:
     
     # Supabase settings
     SUPABASE_URL = os.getenv('SUPABASE_URL')
-    SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+    SUPABASE_KEY = os.getenv('SUPABASE_ANON_KEY')  # Using anon key for regular operations
+    SUPABASE_SERVICE_ROLE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY')  # For admin operations if needed
+    SUPABASE_SCHEMA = os.getenv('SUPABASE_SCHEMA', 'public')
     
     # API keys
     REDDIT_CLIENT_ID = os.getenv('REDDIT_CLIENT_ID')

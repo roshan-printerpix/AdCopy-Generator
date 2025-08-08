@@ -45,6 +45,11 @@ pytest-cov==4.1.0
 black==23.11.0
 flake8==6.1.0
 
+#Supabase
+supabase>=2.6.0
+postgrest>=0.14.9
+python-dotenv>=1.0.1
+
 # Optional: Database alternatives
 # psycopg2-binary==2.9.9  # For direct PostgreSQL connection
 # sqlalchemy==2.0.23      # For ORM if needed
