@@ -54,7 +54,7 @@ def batch_check_duplicates(new_insights):
         if not check_for_duplicates(insight):
             unique_insights.append(insight)
         else:
-            print(f"Skipping duplicate insight: {insight.get('INSIGHT', 'Unknown')[:50]}...")
+            print(f"Skipping duplicate insight: {insight.get('insight', 'Unknown')[:50]}...")
     
     return unique_insights
 

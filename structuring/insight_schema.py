@@ -5,14 +5,16 @@ Defines expected JSON structure and performs validation.
 
 from typing import Dict, Any, Optional
 
+# Updated schema for simplified table structure
 INSIGHT_SCHEMA = {
-    "INSIGHT": str,
-    "RESULTS": str,
-    "LIMITATIONS_CONTEXT": str,
-    "DIFFERENCE_SCORE": int
+    "insight": str,
+    "results": str,  # Changed to JSONB type for structured data
+    "limitations": str,  # Renamed from limitations_context
+    "difference_score": int,
+    "status": str
 }
 
-REQUIRED_FIELDS = ["INSIGHT", "RESULTS", "LIMITATIONS_CONTEXT", "DIFFERENCE_SCORE"]
+REQUIRED_FIELDS = ["insight", "results", "limitations", "difference_score"]
 
 def validate_insight_structure(insight_data):
     """
@@ -42,10 +44,10 @@ def validate_insight_structure(insight_data):
                 errors.append(f"Field {field} must be of type {expected_type.__name__}")
     
     # Validate difference score range
-    if "DIFFERENCE_SCORE" in insight_data:
-        score = insight_data["DIFFERENCE_SCORE"]
+    if "difference_score" in insight_data:
+        score = insight_data["difference_score"]
         if not (0 <= score <= 100):
-            errors.append("DIFFERENCE_SCORE must be between 0 and 100")
+            errors.append("difference_score must be between 0 and 100")
     
     return len(errors) == 0, errors
 
@@ -65,7 +67,7 @@ def sanitize_insight_data(insight_data):
         if field in insight_data:
             value = insight_data[field]
             
-            if field == "DIFFERENCE_SCORE":
+            if field == "difference_score":
                 # Ensure score is integer and within range
                 try:
                     score = int(value)
@@ -75,5 +77,9 @@ def sanitize_insight_data(insight_data):
             else:
                 # Clean string fields
                 sanitized[field] = str(value).strip()
+    
+    # Set default status if not provided
+    if "status" not in sanitized:
+        sanitized["status"] = "greylist"
     
     return sanitized

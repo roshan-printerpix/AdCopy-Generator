@@ -58,9 +58,4 @@ def structure_single_content(cleaned_text):
         print(f"Invalid insight structure: {errors}")
         return None
     
-    # Add metadata
-    sanitized_insight['source_url'] = None  # Will be set if available
-    sanitized_insight['source_hash'] = None  # Will be set for deduplication
-    sanitized_insight['processing_timestamp'] = None  # Will be set by timestamp utility
-    
     return sanitized_insight
