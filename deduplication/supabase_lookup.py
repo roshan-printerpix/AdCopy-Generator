@@ -10,6 +10,8 @@ from collections import Counter
 def fetch_existing_insights(limit=1000):
     """
     Fetch existing insights from Supabase for comparison.
+    Note: With the new schema, insights don't have status directly - 
+    status is tracked separately in the status table.
     
     Args:
         limit (int): Maximum number of insights to fetch
@@ -147,6 +149,85 @@ def extract_keywords_from_insight(insight):
     except Exception as e:
         print(f"Error extracting keywords: {e}")
         return []
+
+def fetch_insights_with_status(status_filter=None, product_name=None, region_code=None, limit=500):
+    """
+    Fetch insights with their status information from the normalized schema.
+    
+    Args:
+        status_filter (str): Filter by status (e.g., 'greylist', 'approved')
+        product_name (str): Filter by product name
+        region_code (str): Filter by region code
+        limit (int): Maximum number of insights to fetch
+    
+    Returns:
+        list: List of insights with status information
+    """
+    try:
+        client = get_supabase_admin_client()
+        
+        # Build query to join insights with status
+        query = client.table('insights').select('''
+            *,
+            status!inner(
+                product_name,
+                region_code,
+                status,
+                updated_at
+            )
+        ''')
+        
+        # Apply filters if provided
+        if status_filter:
+            query = query.eq('status.status', status_filter)
+        if product_name:
+            query = query.eq('status.product_name', product_name)
+        if region_code:
+            query = query.eq('status.region_code', region_code)
+        
+        result = query.limit(limit).execute()
+        
+        if result.data:
+            return result.data
+        else:
+            return []
+            
+    except Exception as e:
+        print(f"Error fetching insights with status: {e}")
+        return []
+
+def get_insight_status_summary(insight_id):
+    """
+    Get a summary of status across all products and regions for a specific insight.
+    
+    Args:
+        insight_id (str): UUID of the insight
+    
+    Returns:
+        dict: Status summary with counts by status type
+    """
+    try:
+        client = get_supabase_admin_client()
+        
+        result = client.table('status').select('*').eq('insight_id', insight_id).execute()
+        
+        if result.data:
+            status_counts = {}
+            for record in result.data:
+                status = record['status']
+                status_counts[status] = status_counts.get(status, 0) + 1
+            
+            return {
+                'total_combinations': len(result.data),
+                'status_breakdown': status_counts,
+                'records': result.data
+            }
+        else:
+            return {'total_combinations': 0, 'status_breakdown': {}, 'records': []}
+            
+    except Exception as e:
+        print(f"Error getting insight status summary: {e}")
+        return {'total_combinations': 0, 'status_breakdown': {}, 'records': []}
 
 def get_relevant_insights_for_comparison(new_insight):
     """

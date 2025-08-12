@@ -53,7 +53,7 @@ class SupabaseManager:
     
     def test_connection(self):
         """
-        Test the Supabase connection.
+        Test the Supabase connection with the new normalized schema.
         
         Returns:
             bool: True if connection successful, False otherwise
@@ -62,13 +62,23 @@ class SupabaseManager:
             client = self.get_client()
             print("Testing Supabase connection...")
             
-            # Try a simple query to test connection
-            result = client.table('insights').select('id').limit(1).execute()
-            print(f"Connection test successful! Found {len(result.data)} records")
+            # Test connection to all tables in the new schema
+            tables_to_test = ['insights', 'products', 'regions', 'status']
+            
+            for table in tables_to_test:
+                try:
+                    result = client.table(table).select('*').limit(1).execute()
+                    print(f"✓ {table} table accessible ({len(result.data)} records found)")
+                except Exception as table_error:
+                    print(f"✗ {table} table not accessible: {table_error}")
+                    return False
+            
+            print("All tables accessible - connection test successful!")
             return True
+            
         except Exception as e:
             print(f"Connection test failed: {e}")
-            print("This might be because the 'insights' table doesn't exist yet.")
+            print("This might be because the tables don't exist yet or credentials are incorrect.")
             
             # Try a more basic connection test
             try:
