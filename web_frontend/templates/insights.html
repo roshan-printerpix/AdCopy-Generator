@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insights Management - Ad-Creative Pipeline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .nav-links {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin: 0 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            transition: background 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-links a.active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .dashboard {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .pagination-controls label {
+            font-weight: 600;
+            color: #6c757d;
+        }
+
+        .pagination-controls select {
+            padding: 0.5rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .refresh-btn, .filter-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover, .filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .filter-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            padding: 1rem;
+            min-width: 200px;
+            z-index: 100;
+            display: none;
+        }
+
+        .filter-dropdown.show {
+            display: block;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .filter-option:hover {
+            background: #f8f9fa;
+        }
+
+        .filter-option input[type="checkbox"] {
+            margin-right: 0.5rem;
+        }
+
+        .insights-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .insights-table th {
+            background: #f8f9fa;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .insights-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+
+        .insights-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .insights-table tr.expanded {
+            background: #e3f2fd;
+        }
+
+        .insight-text {
+            max-width: 400px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .difference-score {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .status-tag {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid;
+        }
+
+        .status-tag.not-tested {
+            background: rgba(108, 117, 125, 0.1);
+            color: #6c757d;
+            border-color: #6c757d;
+        }
+
+        .status-tag.tested {
+            background: rgba(255, 152, 0, 0.1);
+            color: #ff9800;
+            border-color: #ff9800;
+        }
+
+        .status-tag.testing {
+            background: rgba(33, 150, 243, 0.1);
+            color: #2196f3;
+            border-color: #2196f3;
+        }
+
+        .status-tag:hover {
+            transform: scale(1.05);
+        }
+
+        .expand-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .expand-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .expand-btn.expanded {
+            transform: rotate(180deg);
+        }
+
+        .status-details {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-details.show {
+            display: block;
+        }
+
+        .status-detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .status-detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-detail-tag {
+            padding: 0.3rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 2px solid;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .status-detail-tag:hover {
+            transform: scale(1.05);
+        }
+
+        .status-detail-tag.whitelist {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+            border-color: #28a745;
+        }
+
+        .status-detail-tag.blacklist {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 2px solid #e9ecef;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination .current-page {
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: #f8f9fa;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .status-options {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .status-option {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .status-option.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .status-option.whitelist.selected {
+            border-color: #28a745;
+            background: rgba(40, 167, 69, 0.1);
+        }
+
+        .status-option.blacklist.selected {
+            border-color: #dc3545;
+            background: rgba(220, 53, 69, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 2px solid #e9ecef;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .insights-table {
+                font-size: 0.9rem;
+            }
+
+            .insights-table th,
+            .insights-table td {
+                padding: 0.5rem;
+            }
+
+            .insight-text {
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Insights Management</h1>
+            <p>Manage and track your ad creative insights</p>
+        </div>
+
+        <div class="nav-links">
+            <a href="/">Pipeline Dashboard</a>
+            <a href="/insights" class="active">Insights Management</a>
+        </div>
+
+        <div class="dashboard">
+            <div class="controls">
+                <div class="pagination-controls">
+                    <label for="limitSelect">Show:</label>
+                    <select id="limitSelect">
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span>insights per page</span>
+                </div>
+                <div style="display: flex; gap: 1rem; position: relative;">
+                    <button class="refresh-btn" onclick="loadInsights()" title="Refresh">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                    </button>
+                    <button class="filter-btn" onclick="toggleFilter()" title="Filter by Status">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                        </svg>
+                    </button>
+                    <div class="filter-dropdown" id="filterDropdown">
+                        <div class="filter-option">
+                            <input type="checkbox" id="filter-not-tested" checked onchange="applyFilters()">
+                            <label for="filter-not-tested">Not Tested</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="filter-tested" checked onchange="applyFilters()">
+                            <label for="filter-tested">Tested</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="filter-testing" checked onchange="applyFilters()">
+                            <label for="filter-testing">Testing</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="error" class="error" style="display: none;"></div>
+            <div id="loading" class="loading">Loading insights...</div>
+
+            <table class="insights-table" id="insightsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Insight</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody id="insightsTableBody">
+                    <!-- Insights will be populated here -->
+                </tbody>
+            </table>
+
+            <div class="pagination" id="pagination" style="display: none;">
+                <!-- Pagination will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Update Modal -->
+    <div id="statusModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Update Insight Status</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label for="productSelect">Product:</label>
+                <select id="productSelect">
+                    <option value="">Select a product...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="regionSelect">Region:</label>
+                <select id="regionSelect">
+                    <option value="">Select a region...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Status:</label>
+                <div class="status-options">
+                    <div class="status-option whitelist" data-status="whitelist">
+                        <div class="status-detail-tag whitelist">Whitelist</div>
+                        <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #6c757d;">Approved for use</div>
+                    </div>
+                    <div class="status-option blacklist" data-status="blacklist">
+                        <div class="status-detail-tag blacklist">Blacklist</div>
+                        <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #6c757d;">Rejected for use</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="updateStatus()">Update Status</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let currentLimit = 10;
+        let currentInsightId = null;
+        let selectedStatus = null;
+
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', function() {
+            loadInsights();
+            loadProducts();
+            loadRegions();
+        });
+
+        // Event listeners
+        document.getElementById('limitSelect').addEventListener('change', function() {
+            currentLimit = parseInt(this.value);
+            currentPage = 1;
+            loadInsights();
+        });
+
+        // Status option selection
+        document.querySelectorAll('.status-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.status-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedStatus = this.dataset.status;
+            });
+        });
+
+        async function loadInsights() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('insightsTable').style.display = 'none';
+                document.getElementById('pagination').style.display = 'none';
+                document.getElementById('error').style.display = 'none';
+
+                const response = await fetch(`/api/insights?page=${currentPage}&limit=${currentLimit}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                displayInsights(data.insights);
+                displayPagination(data);
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('insightsTable').style.display = 'table';
+                document.getElementById('pagination').style.display = 'flex';
+
+                // Apply current filters after loading
+                applyFilters();
+
+            } catch (error) {
+                console.error('Error loading insights:', error);
+                document.getElementById('error').textContent = 'Error loading insights: ' + error.message;
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function displayInsights(insights) {
+            const tbody = document.getElementById('insightsTableBody');
+            tbody.innerHTML = '';
+
+            insights.forEach(insight => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="insight-text">${insight.insight}</td>
+                    <td class="difference-score">${insight.difference_score}</td>
+                    <td>
+                        <span class="status-tag ${insight.status === 'Tested' ? 'tested' : 'not-tested'}" 
+                              onclick="openStatusModal('${insight.id}', '${insight.status}')">
+                            ${insight.status}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="expand-btn" onclick="toggleDetails('${insight.id}', this)">▼</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+
+                // Add details row (hidden by default)
+                const detailsRow = document.createElement('tr');
+                detailsRow.id = `details-${insight.id}`;
+                detailsRow.innerHTML = `
+                    <td colspan="4">
+                        <div class="status-details" id="status-details-${insight.id}">
+                            <div id="details-content-${insight.id}">
+                                ${insight.status === 'Not Tested' ? 
+                                    '<p style="color: #6c757d; font-style: italic;">This insight has not been tested yet.</p>' : 
+                                    '<p style="color: #6c757d;">Loading details...</p>'
+                                }
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(detailsRow);
+            });
+        }
+
+        function displayPagination(data) {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            // Previous button
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = '← Previous';
+            prevBtn.disabled = data.page <= 1;
+            prevBtn.onclick = () => {
+                if (data.page > 1) {
+                    currentPage = data.page - 1;
+                    loadInsights();
+                }
+            };
+            pagination.appendChild(prevBtn);
+
+            // Page info
+            const pageInfo = document.createElement('span');
+            pageInfo.className = 'current-page';
+            pageInfo.textContent = `Page ${data.page} of ${data.total_pages} (${data.total_count} total)`;
+            pagination.appendChild(pageInfo);
+
+            // Next button
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = 'Next →';
+            nextBtn.disabled = data.page >= data.total_pages;
+            nextBtn.onclick = () => {
+                if (data.page < data.total_pages) {
+                    currentPage = data.page + 1;
+                    loadInsights();
+                }
+            };
+            pagination.appendChild(nextBtn);
+        }
+
+        async function toggleDetails(insightId, button) {
+            const detailsElement = document.getElementById(`status-details-${insightId}`);
+            const isExpanded = detailsElement.classList.contains('show');
+
+            if (isExpanded) {
+                detailsElement.classList.remove('show');
+                button.classList.remove('expanded');
+                button.closest('tr').classList.remove('expanded');
+            } else {
+                detailsElement.classList.add('show');
+                button.classList.add('expanded');
+                button.closest('tr').classList.add('expanded');
+
+                // Load details if not already loaded
+                const contentElement = document.getElementById(`details-content-${insightId}`);
+                if (contentElement.innerHTML.includes('Loading details...')) {
+                    try {
+                        const response = await fetch(`/api/insights/${insightId}/status-details`);
+                        const data = await response.json();
+
+                        if (data.error) {
+                            contentElement.innerHTML = `<p style="color: #dc3545;">Error loading details: ${data.error}</p>`;
+                        } else if (data.details.length === 0) {
+                            contentElement.innerHTML = `
+                                <p style="color: #6c757d; font-style: italic;">This insight has not been tested yet.</p>
+                                <div style="margin-top: 1rem; text-align: center;">
+                                    <button class="btn btn-primary" onclick="addNewStatus('${insightId}')" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                                        + Add Status
+                                    </button>
+                                </div>
+                            `;
+                        } else {
+                            let html = '';
+                            data.details.forEach(detail => {
+                                html += `
+                                    <div class="status-detail-item">
+                                        <span><strong>${detail.product_name}</strong> - ${detail.region_code}</span>
+                                        <span class="status-detail-tag ${detail.status.toLowerCase()}" 
+                                              onclick="editStatusDetail('${insightId}', '${detail.product_name}', '${detail.region_code}', '${detail.status.toLowerCase()}')">
+                                            ${detail.status}
+                                        </span>
+                                    </div>
+                                `;
+                            });
+                            html += `
+                                <div style="margin-top: 1rem; text-align: center;">
+                                    <button class="btn btn-primary" onclick="addNewStatus('${insightId}')" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                                        + Add Status
+                                    </button>
+                                </div>
+                            `;
+                            contentElement.innerHTML = html;
+                        }
+                    } catch (error) {
+                        contentElement.innerHTML = `<p style="color: #dc3545;">Error loading details: ${error.message}</p>`;
+                    }
+                }
+            }
+        }
+
+        function openStatusModal(insightId, currentStatus) {
+            if (currentStatus === 'Tested') {
+                // If already tested, just show details
+                const button = document.querySelector(`button[onclick*="${insightId}"]`);
+                if (button) {
+                    toggleDetails(insightId, button);
+                }
+                return;
+            }
+
+            currentInsightId = insightId;
+            selectedStatus = null;
+            
+            // Reset form
+            document.getElementById('productSelect').value = '';
+            document.getElementById('regionSelect').value = '';
+            document.querySelectorAll('.status-option').forEach(opt => opt.classList.remove('selected'));
+            
+            // Update modal title
+            document.querySelector('.modal-header h3').textContent = 'Add New Status';
+            
+            document.getElementById('statusModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('statusModal').classList.remove('show');
+            currentInsightId = null;
+            selectedStatus = null;
+        }
+
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/products');
+                const data = await response.json();
+                
+                const select = document.getElementById('productSelect');
+                select.innerHTML = '<option value="">Select a product...</option>';
+                
+                data.products.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product;
+                    option.textContent = product;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        }
+
+        async function loadRegions() {
+            try {
+                const response = await fetch('/api/regions');
+                const data = await response.json();
+                
+                const select = document.getElementById('regionSelect');
+                select.innerHTML = '<option value="">Select a region...</option>';
+                
+                data.regions.forEach(region => {
+                    const option = document.createElement('option');
+                    option.value = region;
+                    option.textContent = region;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading regions:', error);
+            }
+        }
+
+        // New functions for editing existing status and adding new status
+        function editStatusDetail(insightId, productName, regionCode, currentStatus) {
+            currentInsightId = insightId;
+            selectedStatus = null;
+            
+            // Pre-fill the form with existing values
+            document.getElementById('productSelect').value = productName;
+            document.getElementById('regionSelect').value = regionCode;
+            
+            // Pre-select the current status
+            document.querySelectorAll('.status-option').forEach(opt => opt.classList.remove('selected'));
+            const statusOption = document.querySelector(`.status-option[data-status="${currentStatus}"]`);
+            if (statusOption) {
+                statusOption.classList.add('selected');
+                selectedStatus = currentStatus;
+            }
+            
+            // Update modal title to indicate editing
+            document.querySelector('.modal-header h3').textContent = 'Edit Status';
+            
+            document.getElementById('statusModal').classList.add('show');
+        }
+
+        function addNewStatus(insightId) {
+            currentInsightId = insightId;
+            selectedStatus = null;
+            
+            // Reset form
+            document.getElementById('productSelect').value = '';
+            document.getElementById('regionSelect').value = '';
+            document.querySelectorAll('.status-option').forEach(opt => opt.classList.remove('selected'));
+            
+            // Update modal title to indicate adding
+            document.querySelector('.modal-header h3').textContent = 'Add New Status';
+            
+            document.getElementById('statusModal').classList.add('show');
+        }
+
+        async function updateStatus() {
+            const productName = document.getElementById('productSelect').value;
+            const regionCode = document.getElementById('regionSelect').value;
+
+            if (!productName || !regionCode || !selectedStatus) {
+                alert('Please fill in all fields and select a status');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/insights/${currentInsightId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        product_name: productName,
+                        region_code: regionCode,
+                        status: selectedStatus
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                alert('Status updated successfully!');
+                closeModal();
+                loadInsights(); // Refresh the table
+
+            } catch (error) {
+                console.error('Error updating status:', error);
+                alert('Error updating status: ' + error.message);
+            }
+        }
+
+        // Filter functionality
+        function toggleFilter() {
+            const dropdown = document.getElementById('filterDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        function applyFilters() {
+            // Get the current filter states
+            const notTestedChecked = document.getElementById('filter-not-tested').checked;
+            const testedChecked = document.getElementById('filter-tested').checked;
+            const testingChecked = document.getElementById('filter-testing').checked;
+
+            // Get all insight rows
+            const rows = document.querySelectorAll('#insightsTableBody tr');
+            
+            for (let i = 0; i < rows.length; i += 2) { // Every other row is a details row
+                const insightRow = rows[i];
+                const detailsRow = rows[i + 1];
+                
+                if (insightRow && detailsRow) {
+                    const statusTag = insightRow.querySelector('.status-tag');
+                    if (statusTag) {
+                        const status = statusTag.textContent.trim();
+                        let shouldShow = false;
+
+                        // Check if this status should be shown based on filters
+                        if (status === 'Not Tested' && notTestedChecked) shouldShow = true;
+                        if (status === 'Tested' && testedChecked) shouldShow = true;
+                        if (status === 'Testing' && testingChecked) shouldShow = true;
+
+                        // Show/hide both the insight row and its details row
+                        insightRow.style.display = shouldShow ? '' : 'none';
+                        detailsRow.style.display = shouldShow ? '' : 'none';
+                    }
+                }
+            }
+        }
+
+        // Close filter dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const filterBtn = document.querySelector('.filter-btn');
+            const filterDropdown = document.getElementById('filterDropdown');
+            
+            if (!filterBtn.contains(e.target) && !filterDropdown.contains(e.target)) {
+                filterDropdown.classList.remove('show');
+            }
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('statusModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

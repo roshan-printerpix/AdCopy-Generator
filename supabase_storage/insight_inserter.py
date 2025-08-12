@@ -111,7 +111,7 @@ def batch_insert_insights(supabase_client, structured_insights):
     
     return successful_inserts, failed_inserts
 
-def move_insight_to_testing(supabase_client, insight_id, product_name, region_code, status='testing'):
+def move_insight_to_testing(supabase_client, insight_id, product_name, region_code, status='whitelist'):
     """
     Move an insight from greylist (insights table only) to active testing (status table).
     This creates a status record for the specific product/region combination.
@@ -121,7 +121,7 @@ def move_insight_to_testing(supabase_client, insight_id, product_name, region_co
         insight_id (str): UUID of the insight
         product_name (str): Product name
         region_code (str): Region code
-        status (str): Initial status (default: 'testing')
+        status (str): Status value ('whitelist' or 'blacklist')
     
     Returns:
         bool: True if successful, False otherwise
@@ -134,22 +134,39 @@ def move_insight_to_testing(supabase_client, insight_id, product_name, region_co
             print(f"Insight {insight_id} not found in insights table")
             return False
         
-        # Create status record
-        status_record = {
-            'insight_id': insight_id,
-            'product_name': product_name,
-            'region_code': region_code,
-            'status': status
-        }
+        # Check if status record already exists
+        existing_status = supabase_client.table('status').select('*').eq('insight_id', insight_id).eq('product_name', product_name).eq('region_code', region_code).execute()
         
-        result = supabase_client.table('status').insert(status_record).execute()
-        
-        if result.data:
-            print(f"Moved insight {insight_id} to {status} for {product_name}/{region_code}")
-            return True
+        if existing_status.data:
+            # Update existing record
+            result = supabase_client.table('status').update({
+                'status': status,
+                'updated_at': datetime.now(timezone.utc).isoformat()
+            }).eq('insight_id', insight_id).eq('product_name', product_name).eq('region_code', region_code).execute()
+            
+            if result.data:
+                print(f"Updated status for insight {insight_id} to {status} for {product_name}/{region_code}")
+                return True
+            else:
+                print(f"Failed to update existing status record for insight {insight_id}")
+                return False
         else:
-            print(f"Failed to create status record for insight {insight_id}")
-            return False
+            # Create new status record
+            status_record = {
+                'insight_id': insight_id,
+                'product_name': product_name,
+                'region_code': region_code,
+                'status': status
+            }
+            
+            result = supabase_client.table('status').insert(status_record).execute()
+            
+            if result.data:
+                print(f"Created new status record for insight {insight_id} to {status} for {product_name}/{region_code}")
+                return True
+            else:
+                print(f"Failed to create status record for insight {insight_id}")
+                return False
             
     except Exception as e:
         print(f"Error moving insight to testing: {e}")

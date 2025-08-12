@@ -3,6 +3,10 @@ Schema Manager Module
 Utilities for managing the normalized database schema.
 """
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from supabase_storage.supabase_client import get_supabase_admin_client
 from datetime import datetime, timezone
 

@@ -179,6 +179,11 @@ def index():
     """Main dashboard page."""
     return render_template('index.html')
 
+@app.route('/insights')
+def insights():
+    """Insights management page."""
+    return render_template('insights.html')
+
 @app.route('/api/status')
 def get_status():
     """Get current pipeline status."""
@@ -254,6 +259,151 @@ def reset_pipeline():
     emit_progress_update()
     return jsonify({'message': 'Pipeline status reset'})
 
+# Insights Management API Endpoints
+
+@app.route('/api/insights')
+def get_insights():
+    """Get insights with pagination."""
+    try:
+        from supabase_storage.supabase_client import get_supabase_admin_client
+        from deduplication.supabase_lookup import get_insight_status_summary
+        
+        # Get pagination parameters
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+        offset = (page - 1) * limit
+        
+        client = get_supabase_admin_client()
+        
+        # Get total count
+        count_result = client.table('insights').select('id', count='exact').execute()
+        total_count = count_result.count if count_result.count else 0
+        
+        # Get insights with pagination
+        result = client.table('insights').select('*').range(offset, offset + limit - 1).order('id', desc=True).execute()
+        
+        insights = []
+        if result.data:
+            for insight in result.data:
+                # Check if insight has any status records (used vs not used)
+                status_summary = get_insight_status_summary(insight['id'])
+                has_status = status_summary['total_combinations'] > 0
+                
+                insights.append({
+                    'id': insight['id'],
+                    'insight': insight['insight'],
+                    'results': insight['results'],
+                    'limitations_context': insight['limitations_context'],
+                    'difference_score': insight['difference_score'],
+                    'status': 'Tested' if has_status else 'Not Tested',
+                    'status_details': status_summary
+                })
+        
+        return jsonify({
+            'insights': insights,
+            'total_count': total_count,
+            'page': page,
+            'limit': limit,
+            'total_pages': (total_count + limit - 1) // limit
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/products')
+def get_products():
+    """Get all available products."""
+    try:
+        from supabase_storage.schema_manager import get_all_products
+        
+        products = get_all_products()
+        return jsonify({'products': [p['name'] for p in products]})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/regions')
+def get_regions():
+    """Get all available regions."""
+    try:
+        from supabase_storage.schema_manager import get_all_regions
+        
+        regions = get_all_regions()
+        return jsonify({'regions': [r['code'] for r in regions]})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/insights/<insight_id>/status', methods=['POST'])
+def update_insight_status(insight_id):
+    """Move insight to testing status."""
+    try:
+        from supabase_storage.supabase_client import get_supabase_admin_client
+        from supabase_storage.insight_inserter import move_insight_to_testing
+        
+        data = request.get_json()
+        product_name = data.get('product_name')
+        region_code = data.get('region_code')
+        status = data.get('status')  # 'whitelist' or 'blacklist'
+        
+        if not all([product_name, region_code, status]):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        if status not in ['whitelist', 'blacklist']:
+            return jsonify({'error': 'Status must be whitelist or blacklist'}), 400
+        
+        client = get_supabase_admin_client()
+        
+        # Check for existing status record to prevent conflicts when adding new
+        existing_status = client.table('status').select('*').eq('insight_id', insight_id).eq('product_name', product_name).eq('region_code', region_code).execute()
+        
+        # If this is a new status (not editing), check for conflicts
+        if not existing_status.data:
+            # This is a new status record - check if it would create a conflict
+            # For now, we allow multiple statuses per product/region combination
+            pass
+        
+        # Map frontend status to backend status (use the actual enum values)
+        backend_status = 'whitelist' if status == 'whitelist' else 'blacklist'
+        
+        success = move_insight_to_testing(client, insight_id, product_name, region_code, backend_status)
+        
+        if success:
+            return jsonify({'message': 'Status updated successfully'})
+        else:
+            return jsonify({'error': 'Failed to update status'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/insights/<insight_id>/status-details')
+def get_insight_status_details(insight_id):
+    """Get detailed status information for an insight."""
+    try:
+        from deduplication.supabase_lookup import get_insight_status_summary
+        
+        status_summary = get_insight_status_summary(insight_id)
+        
+        # Transform the data for frontend display
+        details = []
+        for record in status_summary.get('records', []):
+            # Map backend status to frontend display (using actual enum values)
+            display_status = 'Whitelist' if record['status'] == 'whitelist' else 'Blacklist'
+            details.append({
+                'product_name': record['product_name'],
+                'region_code': record['region_code'],
+                'status': display_status,
+                'updated_at': record['updated_at']
+            })
+        
+        return jsonify({
+            'details': details,
+            'summary': status_summary['status_breakdown']
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @socketio.on('connect')
 def handle_connect():
     """Handle client connection."""
@@ -267,5 +417,5 @@ def handle_disconnect():
 
 if __name__ == '__main__':
     print("🚀 Starting Ad-Creative Insight Pipeline Web Interface...")
-    print("📱 Open your browser to: http://localhost:5002")
-    socketio.run(app, debug=True, host='0.0.0.0', port=5002)
+    print("📱 Open your browser to: http://localhost:5003")
+    socketio.run(app, debug=True, host='0.0.0.0', port=5003)

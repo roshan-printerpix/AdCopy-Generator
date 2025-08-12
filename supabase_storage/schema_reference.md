@@ -48,17 +48,15 @@ Tracks testing status for each insight/product/region combination.
 
 ### Status Enum Values
 
-- `greylist` - Default status for newly created insights
-- `approved` - Insights that have been tested and approved
-- `rejected` - Insights that have been tested and rejected
-- `testing` - Insights currently being tested
-- `archived` - Insights that are no longer active
+- `greylist` - Default status for newly created insights (not used in status table)
+- `whitelist` - Insights that have been tested and approved for use
+- `blacklist` - Insights that have been tested and rejected for use
 
 ### Sample SQL for Table Creation
 
 ```sql
 -- Create status enum
-CREATE TYPE status_enum AS ENUM ('greylist', 'approved', 'rejected', 'testing', 'archived');
+CREATE TYPE status_enum AS ENUM ('greylist', 'whitelist', 'blacklist');
 
 -- Create insights table
 CREATE TABLE insights (
