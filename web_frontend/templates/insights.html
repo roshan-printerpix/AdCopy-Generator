@@ -287,15 +287,32 @@
 
         .status-details {
             display: none;
-            margin-top: 1rem;
-            padding: 1rem;
-            background: #f8f9fa;
-            border-radius: 10px;
-            border-left: 4px solid #667eea;
+            padding: 0;
+            background: transparent;
         }
 
         .status-details.show {
             display: block;
+        }
+
+        .details-row {
+            display: none;
+        }
+
+        .details-row.show {
+            display: table-row;
+        }
+
+        .details-cell {
+            padding: 0 !important;
+            border-bottom: none !important;
+        }
+
+        .details-content {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            margin: 0;
+            padding: 1rem;
         }
 
         .status-detail-item {
@@ -766,15 +783,14 @@
                 // Add details row (hidden by default)
                 const detailsRow = document.createElement('tr');
                 detailsRow.id = `details-${insight.id}`;
+                detailsRow.className = 'details-row';
                 detailsRow.innerHTML = `
-                    <td colspan="4">
-                        <div class="status-details" id="status-details-${insight.id}">
-                            <div id="details-content-${insight.id}">
-                                ${insight.status === 'Not Tested' ?
+                    <td colspan="4" class="details-cell">
+                        <div class="details-content" id="details-content-${insight.id}">
+                            ${insight.status === 'Not Tested' ?
                         '<p style="color: #6c757d; font-style: italic;">This insight has not been tested yet.</p>' :
                         '<p style="color: #6c757d;">Loading details...</p>'
                     }
-                            </div>
                         </div>
                     </td>
                 `;
@@ -818,15 +834,15 @@
         }
 
         async function toggleDetails(insightId, button) {
-            const detailsElement = document.getElementById(`status-details-${insightId}`);
-            const isExpanded = detailsElement.classList.contains('show');
+            const detailsRow = document.getElementById(`details-${insightId}`);
+            const isExpanded = detailsRow.classList.contains('show');
 
             if (isExpanded) {
-                detailsElement.classList.remove('show');
+                detailsRow.classList.remove('show');
                 button.classList.remove('expanded');
                 button.closest('tr').classList.remove('expanded');
             } else {
-                detailsElement.classList.add('show');
+                detailsRow.classList.add('show');
                 button.classList.add('expanded');
                 button.closest('tr').classList.add('expanded');
 
@@ -1011,13 +1027,70 @@
                     throw new Error(data.error);
                 }
 
+                // Update UI instantly without reloading
+                updateInsightStatusUI(currentInsightId, productName, regionCode, selectedStatus);
+
                 alert('Status updated successfully!');
                 closeModal();
-                loadInsights(); // Refresh the table
 
             } catch (error) {
                 console.error('Error updating status:', error);
                 alert('Error updating status: ' + error.message);
+            }
+        }
+
+        function updateInsightStatusUI(insightId, productName, regionCode, status) {
+            // Update the main status tag to "Tested"
+            const statusTag = document.querySelector(`tr td .status-tag[onclick*="${insightId}"]`);
+            if (statusTag) {
+                statusTag.textContent = 'Tested';
+                statusTag.className = 'status-tag tested';
+            }
+
+            // Update the details content if it exists and is loaded
+            const detailsContent = document.getElementById(`details-content-${insightId}`);
+            if (detailsContent && !detailsContent.innerHTML.includes('Loading details...')) {
+                // Check if this is a new status or updating existing
+                const existingItems = detailsContent.querySelectorAll('.status-detail-item');
+                let updated = false;
+
+                existingItems.forEach(item => {
+                    const text = item.querySelector('span:first-child').textContent;
+                    if (text.includes(productName) && text.includes(regionCode)) {
+                        // Update existing item
+                        const statusSpan = item.querySelector('.status-detail-tag');
+                        statusSpan.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                        statusSpan.className = `status-detail-tag ${status}`;
+                        statusSpan.onclick = () => editStatusDetail(insightId, productName, regionCode, status);
+                        updated = true;
+                    }
+                });
+
+                if (!updated) {
+                    // Add new item
+                    const addButtonContainer = detailsContent.querySelector('div[style*="text-align: center"]');
+                    const newItem = document.createElement('div');
+                    newItem.className = 'status-detail-item';
+                    newItem.innerHTML = `
+                        <span><strong>${productName}</strong> - ${regionCode}</span>
+                        <span class="status-detail-tag ${status}" 
+                              onclick="editStatusDetail('${insightId}', '${productName}', '${regionCode}', '${status}')">
+                            ${status.charAt(0).toUpperCase() + status.slice(1)}
+                        </span>
+                    `;
+
+                    if (addButtonContainer) {
+                        detailsContent.insertBefore(newItem, addButtonContainer);
+                    } else {
+                        detailsContent.appendChild(newItem);
+                    }
+                }
+
+                // If this was the first status added, remove the "not tested" message
+                const notTestedMsg = detailsContent.querySelector('p[style*="font-style: italic"]');
+                if (notTestedMsg && notTestedMsg.textContent.includes('not been tested yet')) {
+                    notTestedMsg.remove();
+                }
             }
         }
 
@@ -1033,14 +1106,14 @@
             const testedChecked = document.getElementById('filter-tested').checked;
             const testingChecked = document.getElementById('filter-testing').checked;
 
-            // Get all insight rows
+            // Get all rows in the table body
             const rows = document.querySelectorAll('#insightsTableBody tr');
 
             for (let i = 0; i < rows.length; i += 2) { // Every other row is a details row
                 const insightRow = rows[i];
                 const detailsRow = rows[i + 1];
 
-                if (insightRow && detailsRow) {
+                if (insightRow && detailsRow && !insightRow.classList.contains('details-row')) {
                     const statusTag = insightRow.querySelector('.status-tag');
                     if (statusTag) {
                         const status = statusTag.textContent.trim();
