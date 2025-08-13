@@ -407,42 +407,11 @@
         <div class="nav-links" style="text-align: center; margin-bottom: 2rem;">
             <a href="/" style="color: white; text-decoration: none; margin: 0 1rem; padding: 0.5rem 1rem; border-radius: 8px; background: rgba(255, 255, 255, 0.3);">Pipeline Dashboard</a>
             <a href="/insights" style="color: white; text-decoration: none; margin: 0 1rem; padding: 0.5rem 1rem; border-radius: 8px; background: rgba(255, 255, 255, 0.1); transition: background 0.3s ease;" onmouseover="this.style.background='rgba(255, 255, 255, 0.2)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'">Insights Management</a>
+            <a href="/config" style="color: white; text-decoration: none; margin: 0 1rem; padding: 0.5rem 1rem; border-radius: 8px; background: rgba(255, 255, 255, 0.1); transition: background 0.3s ease;" onmouseover="this.style.background='rgba(255, 255, 255, 0.2)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'">Configuration</a>
         </div>
 
         <div class="dashboard">
             <div class="controls">
-                <div class="config-section">
-                    <h3>Pipeline Configuration</h3>
-                    <div class="input-group">
-                        <label for="subreddits">Subreddits:</label>
-                        <input type="text" id="subreddits" placeholder="ppc, marketing, advertising" value="ppc">
-                    </div>
-                    <div class="input-group">
-                        <label for="postLimit">Post Limit:</label>
-                        <input type="number" id="postLimit" placeholder="20" value="20" min="1" max="100">
-                    </div>
-                    <div class="input-group">
-                        <label for="timeFilter">Time Filter:</label>
-                        <select id="timeFilter" style="flex: 1; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 8px;">
-                            <option value="hour">Past Hour</option>
-                            <option value="day">Past Day</option>
-                            <option value="week" selected>Past Week</option>
-                            <option value="month">Past Month</option>
-                            <option value="year">Past Year</option>
-                            <option value="all">All Time</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="includeComments">Include Comments:</label>
-                        <input type="checkbox" id="includeComments" checked style="width: auto; margin-right: 0.5rem;">
-                        <span style="color: #6c757d; font-size: 0.9rem;">Scrape comments from each post</span>
-                    </div>
-                    <div class="input-group">
-                        <label for="maxComments">Max Comments:</label>
-                        <input type="number" id="maxComments" placeholder="10" value="10" min="1" max="50">
-                    </div>
-                </div>
-                
                 <div class="button-group">
                     <button id="startBtn" class="btn btn-primary">Start Pipeline</button>
                     <button id="resetBtn" class="btn btn-secondary">Reset</button>
@@ -561,18 +530,19 @@
         socket.on('progress_update', updateProgress);
 
         function startPipeline() {
-            // Get configuration from form
-            const subredditsInput = document.getElementById('subreddits').value;
-            const postLimit = parseInt(document.getElementById('postLimit').value) || 20;
-            const timeFilter = document.getElementById('timeFilter').value;
-            const includeComments = document.getElementById('includeComments').checked;
-            const maxComments = parseInt(document.getElementById('maxComments').value) || 10;
+            // Get configuration from localStorage or use defaults
+            let config;
+            try {
+                const savedConfig = localStorage.getItem('pipelineConfig');
+                config = savedConfig ? JSON.parse(savedConfig) : getDefaultConfig();
+            } catch (e) {
+                console.error('Error loading configuration:', e);
+                config = getDefaultConfig();
+            }
             
-            // Parse subreddits (split by comma and trim)
-            const subreddits = subredditsInput.split(',').map(s => s.trim()).filter(s => s.length > 0);
-            
-            if (subreddits.length === 0) {
-                alert('Please enter at least one subreddit');
+            // Validate configuration
+            if (!config.sources.reddit.subreddits || config.sources.reddit.subreddits.length === 0) {
+                alert('No subreddits configured. Please go to Configuration page to set up the pipeline.');
                 return;
             }
 
@@ -581,21 +551,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    sources: {
-                        reddit: { 
-                            enabled: true,
-                            subreddits: subreddits,
-                            limit: postLimit,
-                            time_filter: timeFilter,
-                            sort: 'hot',
-                            include_comments: includeComments,
-                            max_comments: maxComments
-                        },
-                        web: { enabled: false },
-                        apis: { enabled: false }
-                    }
-                })
+                body: JSON.stringify(config)
             })
             .then(response => response.json())
             .then(data => {
@@ -607,6 +563,24 @@
                 console.error('Error starting pipeline:', error);
                 alert('Error starting pipeline');
             });
+        }
+
+        function getDefaultConfig() {
+            return {
+                sources: {
+                    reddit: {
+                        enabled: true,
+                        subreddits: ['ppc'],
+                        limit: 20,
+                        time_filter: 'week',
+                        sort: 'hot',
+                        include_comments: true,
+                        max_comments: 10
+                    },
+                    web: { enabled: false },
+                    apis: { enabled: false }
+                }
+            };
         }
 
         function resetPipeline() {

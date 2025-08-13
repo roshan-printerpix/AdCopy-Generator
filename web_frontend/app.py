@@ -184,6 +184,11 @@ def insights():
     """Insights management page."""
     return render_template('insights.html')
 
+@app.route('/config')
+def config():
+    """Pipeline configuration page."""
+    return render_template('config.html')
+
 @app.route('/api/status')
 def get_status():
     """Get current pipeline status."""
