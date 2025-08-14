@@ -11,7 +11,9 @@ import sys
 import os
 
 # Add the project root to Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from main import run_pipeline
 from utils.config import Config
@@ -421,6 +423,10 @@ def handle_disconnect():
     print('Client disconnected')
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5003))
+    debug = os.environ.get('FLASK_ENV') != 'production'
+    
     print("🚀 Starting Ad-Creative Insight Pipeline Web Interface...")
-    print("📱 Open your browser to: http://localhost:5003")
-    socketio.run(app, debug=True, host='0.0.0.0', port=5003)
+    print(f"📱 Running on port: {port}")
+    
+    socketio.run(app, debug=debug, host='0.0.0.0', port=port)
