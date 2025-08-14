@@ -15,8 +15,16 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from main import run_pipeline
-from utils.config import Config
+# Try to import main pipeline, but handle gracefully if dependencies are missing
+try:
+    from main import run_pipeline
+    PIPELINE_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Pipeline dependencies not available: {e}")
+    PIPELINE_AVAILABLE = False
+    
+    def run_pipeline(config):
+        return {"error": "Pipeline dependencies not available"}
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
@@ -175,6 +183,15 @@ def run_real_pipeline(sources_config):
         
         pipeline_status['current_step'] = None
         emit_progress_update()
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Railway."""
+    return jsonify({
+        'status': 'healthy',
+        'pipeline_available': PIPELINE_AVAILABLE,
+        'message': 'Ad-Creative Insight Pipeline Web Interface is running'
+    })
 
 @app.route('/')
 def index():
