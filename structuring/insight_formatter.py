@@ -105,12 +105,12 @@ def call_llm_api(prompt):
         client = openai.OpenAI(api_key=Config.OPENAI_API_KEY)
         
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-5-nano",
             messages=[
                 {"role": "system", "content": "You are an expert at analyzing marketing content and extracting structured insights for ad creative purposes. Always respond with valid JSON only."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3,
+            temperature=1,
             max_tokens=1000
         )
         
